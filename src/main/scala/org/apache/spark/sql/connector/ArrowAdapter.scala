@@ -27,14 +27,16 @@ import org.apache.arrow.vector.ipc.{ReadChannel, WriteChannel}
 import org.apache.arrow.vector.ipc.message.{ArrowFieldNode, ArrowRecordBatch, MessageSerializer}
 import org.apache.arrow.vector.types.Types.MinorType
 import org.apache.arrow.vector.types.pojo.Schema
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.types.{BinaryType, BooleanType, ByteType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, StructField, StructType, TimestampType}
 import org.apache.spark.sql.util.ArrowUtils
 import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnarBatch}
+import org.apache.spark.sql.vectorized.rapids.AccessibleArrowColumnVector
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object ArrowAdapter {
+object ArrowAdapter extends Logging {
 
   def toArrowMinorType(field: StructField): MinorType = field.dataType match {
     case BooleanType => MinorType.BIT
@@ -93,6 +95,7 @@ object ArrowAdapter {
   ): ColumnarBatch = {
     val closeables = new mutable.ListBuffer[AutoCloseable]()
     try {
+      logWarning("creating arrow column vector")
       val deserializedRecordBatch: ArrowRecordBatch = MessageSerializer.deserializeRecordBatch(
         new ReadChannel(Channels.newChannel(recordBatchInputStream)),
         allocator)
