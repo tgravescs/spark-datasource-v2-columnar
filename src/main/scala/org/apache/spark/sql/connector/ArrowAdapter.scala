@@ -64,6 +64,7 @@ object ArrowAdapter extends Logging {
   }
 
   def deserializeArrowSchemaBinary(serializedSchema: Array[Byte]): Schema = {
+    logWarning("size to deserialize is: " + serializedSchema.length)
     Schema.deserialize(ByteBuffer.wrap(serializedSchema))
   }
 
@@ -104,7 +105,7 @@ object ArrowAdapter extends Logging {
       val vectorLoader = new VectorLoader(schemaRoot)
       vectorLoader.load(deserializedRecordBatch)
       new ColumnarBatch(schemaRoot.getFieldVectors.asScala
-        .map(vec => new ArrowColumnVector(vec))
+        .map(vec => new AccessibleArrowColumnVector(vec))
         .toArray,
         schemaRoot.getRowCount
       )
