@@ -18,6 +18,7 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, ZoneId}
 import java.{util => ju}
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.connector.catalog.{SupportsRead, SupportsWrite, Table, TableCapability}
@@ -36,7 +37,7 @@ class InMemoryColumnarTable(
     val schema: StructType,
     override val partitioning: Array[Transform],
     override val properties: ju.Map[String, String])
-  extends Table with SupportsWrite with SupportsRead with AutoCloseable {
+  extends Table with SupportsWrite with SupportsRead with AutoCloseable with Logging {
 
   partitioning.foreach {
     case _: IdentityTransform =>
@@ -124,6 +125,7 @@ class InMemoryColumnarTable(
   def withData(data: Array[BufferedRows]): InMemoryColumnarTable = dataMap.synchronized {
     val rowsGroupByPartition: mutable.Map[Seq[Any], BufferedRows] =
       new mutable.HashMap[Seq[Any], BufferedRows]()
+
     data.foreach {
       _.rows.foreach { row =>
         val key = getKey(row)
@@ -161,6 +163,7 @@ class InMemoryColumnarTable(
       override def buildScanPartitions(
           requiredColumnsSchema: StructType
       ): Array[InMemoryTableScanPartition] = dataMap.synchronized {
+        logWarning("scan builder num entries dataMap is " + dataMap.size)
         dataMap.values.map {
           columnarBatch: WritableColumnarBatch =>
             if (requiredColumnsSchema.fields.isEmpty) {
